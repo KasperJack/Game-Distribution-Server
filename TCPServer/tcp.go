@@ -11,7 +11,8 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-    "strings"
+	"strings"
+	//"time"
 )
 
 
@@ -33,7 +34,10 @@ func handleClientDownload(conn net.Conn) {
     game = strings.TrimSuffix(game, "\n")
     fmt.Println(game)
 
-    // SEND TREE 
+
+
+
+    //  OPEN TREE 
     gametree := filepath.Join(config.GamesRepo,game, config.GameTree)
 
     t,err := FileTree.Parse(gametree)
@@ -56,8 +60,25 @@ func handleClientDownload(conn net.Conn) {
         log.Println(err)
     }
 
-            // Send the list of files as a JSON payload.
+
+
+
+    // send BLOB TREE
+
+    bt := t.ManifestBlob()
     encoder := json.NewEncoder(conn)
+    
+	if err := encoder.Encode(bt); err != nil {
+		log.Println("Error sending JSON:", err)
+		return
+	}
+
+
+
+
+
+    // send FILE INO
+    //encoder := json.NewEncoder(conn)
     if err := encoder.Encode(fileList); err != nil {
         log.Println("Error sending file list:", err)
         return
@@ -65,28 +86,30 @@ func handleClientDownload(conn net.Conn) {
     
     
 
+    filepaths := t.Files()
 
 
-
-  // 3️⃣ Stream each file sequentially
-    for _, fileInfo := range fileList {
-        filePath := filepath.Join("filesDir", fileInfo.Name)
+    
+    for _, file := range filepaths {
+        
+        filePath := filepath.Join(config.GamesRepo,game,file)
+        fmt.Println(filePath)
         file, err := os.Open(filePath)
         if err != nil {
-            log.Printf("Error opening file %s: %v", fileInfo.Name, err)
+            log.Printf("Error opening file %s: %v", filePath, err)
             continue
         }
 
-        // Use a large buffer for higher throughput (e.g., 4 MB)
         buf := make([]byte, 4*1024*1024)
         if _, err := io.CopyBuffer(conn, file, buf); err != nil {
-            log.Printf("Error streaming file %s: %v", fileInfo.Name, err)
+            log.Printf("Error streaming file %s: %v", filePath, err)
             file.Close()
             break // Stop sending if network error occurs
         }
 
         file.Close()
-        log.Printf("Finished sending %s (%d bytes)", fileInfo.Name, fileInfo.Size)
+
+        log.Printf("Finished sending %s", filePath)
     }
 
     log.Printf("All files sent to %s", conn.RemoteAddr())
