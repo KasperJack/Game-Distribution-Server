@@ -1,24 +1,20 @@
 package tcpserver
 
 import (
-    "encoding/json"
-    "log"
-    "net"
-    "os"
-    "path/filepath"
-    "io"
+	"GDS/FileTree"
+	"GDS/config"
+	"bufio"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log"
+	"net"
+	"os"
+	"path/filepath"
+    "strings"
 )
 
 
-
-
-const filesDir = "./files_to_download"
-
-// FileInfo holds metadata about a file.
-type FileInfo struct {
-    Name string
-    Size int64
-}
 
 
 
@@ -29,34 +25,52 @@ func handleClientDownload(conn net.Conn) {
     defer conn.Close()
     log.Printf("Client connected from %s", conn.RemoteAddr())
 
-    // 1. Get the list of files and send metadata.
-    files, err := os.ReadDir(filesDir)
+
+
+
+    // GET GAME NAME 
+    game,_ := bufio.NewReader(conn).ReadString('\n')
+    game = strings.TrimSuffix(game, "\n")
+    fmt.Println(game)
+
+    // SEND TREE 
+    gametree := filepath.Join(config.GamesRepo,game, config.GameTree)
+
+    t,err := FileTree.Parse(gametree)
+
     if err != nil {
-        log.Println("Error reading files directory:", err)
+        log.Println(err)
         return
     }
 
-    var fileList []FileInfo
-    for _, file := range files {
-        if !file.IsDir() {
-            info, _ := file.Info()
-            fileList = append(fileList, FileInfo{Name: file.Name(), Size: info.Size()})
-        }
+
+
+
+
+    
+
+    // GAME INFO
+    
+    fileList, err := t.FileInfo()
+    if err != nil {
+        log.Println(err)
     }
 
-    // Send the list of files as a JSON payload.
+            // Send the list of files as a JSON payload.
     encoder := json.NewEncoder(conn)
     if err := encoder.Encode(fileList); err != nil {
         log.Println("Error sending file list:", err)
         return
     }
     
+    
+
 
 
 
   // 3️⃣ Stream each file sequentially
     for _, fileInfo := range fileList {
-        filePath := filepath.Join(filesDir, fileInfo.Name)
+        filePath := filepath.Join("filesDir", fileInfo.Name)
         file, err := os.Open(filePath)
         if err != nil {
             log.Printf("Error opening file %s: %v", fileInfo.Name, err)

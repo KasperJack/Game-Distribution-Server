@@ -1,34 +1,52 @@
 package FileTree
 
-
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
 
+
 type TreeManifest struct {
 	protocolVersion string
-	RootName        string
+	rootName        string
+	rootDir         string
+	blob            []byte
 	generated       time.Time
 	TotalDirs       int
 	TotalFiles      int
 	dirs            []string
 	files           []string
+	
 }
 
-// Parse reads a manifest file and builds a Manifest struct
-func Parse(path string) (*TreeManifest, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
 
+
+func Parse(path string) (*TreeManifest, error) {
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil,err
+	}
 	m := &TreeManifest{}
-	scanner := bufio.NewScanner(f)
+	m.blob = data
+
+
+
+	//f, _ := os.Open(path)
+	//defer f.Close()
+
+	parent := filepath.Dir(path)
+	gameDir := filepath.Dir(parent)
+
+
+	
+	m.rootDir = gameDir
+	scanner := bufio.NewScanner(bytes.NewReader(data))
 
 	inDirs, inFiles := false, false
 
@@ -42,7 +60,7 @@ func Parse(path string) (*TreeManifest, error) {
 		case strings.HasPrefix(line, "PROTOCOL_VERSION:"):
 			m.protocolVersion = strings.TrimPrefix(line, "PROTOCOL_VERSION:")
 		case strings.HasPrefix(line, "ROOT_NAME:"):
-			m.RootName = strings.TrimPrefix(line, "ROOT_NAME:")
+			m.rootName = strings.TrimPrefix(line, "ROOT_NAME:")
 		case strings.HasPrefix(line, "GENERATED:"):
 			t, _ := time.Parse(time.RFC3339Nano, strings.TrimPrefix(line, "GENERATED:"))
 			m.generated = t

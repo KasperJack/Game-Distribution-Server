@@ -16,41 +16,37 @@ type FileInfo struct {
     Size int64
 }
 
-
-
-
-
-
-func (m *TreeManifest) CreateDirs(target string) error {
-	for _, dir := range m.dirs {
-		path := filepath.Join(target, dir)
-		if err := os.MkdirAll(path, 0755); err != nil {
-			return err
-		}
-	}
-	return nil
+type FileBlob struct {
+	Blob []uint8 
 }
 
 
-func (m *TreeManifest) CreateDirsRoot(target string) error {
-	rootPath := filepath.Join(target, m.RootName)
-	for _, dir := range m.dirs {
-		path := filepath.Join(rootPath, dir)
-		if err := os.MkdirAll(path, 0755); err != nil {
-			return err
-		}
-	}
-	return nil
+
+
+func (t *TreeManifest) ManifestBlob() *FileBlob {
+	
+	b := &FileBlob{Blob: t.blob}
+	return b
 }
 
 
 
 
 
-func (m *TreeManifest) FilesFrom(Filename string) ([]string, error) {
-	for i, f := range m.files {
+
+
+func (t *TreeManifest) Files() []string {
+	
+	return t.files //paths 
+}
+
+
+
+
+func (t *TreeManifest) FilesFrom(Filename string) ([]string, error) {
+	for i, f := range t.files {
 		if f == Filename {
-			return m.files[i:],nil // inclusive
+			return t.files[i:],nil // inclusive //paths
 		}
 	}
 	return []string{},fmt.Errorf("file does not exist")
@@ -60,12 +56,16 @@ func (m *TreeManifest) FilesFrom(Filename string) ([]string, error) {
 
 
 
-func (m *TreeManifest) FileInfo() ([]FileInfo, error) {
+
+
+
+
+func (t *TreeManifest) FileInfo() ([]FileInfo, error) {
 	var fileList []FileInfo
-	for _, f := range m.files {
+	for _, f := range t.files {
 
-
-		info, err := os.Stat(f)
+		fullPath := filepath.Join(t.rootDir, f)
+		info, err := os.Stat(fullPath)
 		if err != nil {
 			return nil, err 
 		}
@@ -80,14 +80,28 @@ func (m *TreeManifest) FileInfo() ([]FileInfo, error) {
 
 
 
-func (m *TreeManifest) FileInfoFrom(Filename string) ([]FileInfo, error) {
+func (t *TreeManifest) FileInfoFrom(Filename string) ([]FileInfo, error) {
 
-	for i, f := range m.files {
-		if f == Filename {
-			return 
-		}
+	files, err := t.FilesFrom(Filename) 
+	
+	if err != nil {
+		return nil,err
 	}
-	return nil,nil
+
+	var fileList []FileInfo
+	for _, f := range files {
+
+		fullPath := filepath.Join(t.rootDir, f)
+
+		info, err := os.Stat(fullPath)
+		if err != nil {
+			return nil, err 
+		}
+
+		fileList = append(fileList, FileInfo{Name: info.Name(), Size: info.Size()})
+	}
+
+	return fileList,nil
 }
 
 
@@ -96,13 +110,3 @@ func (m *TreeManifest) FileInfoFrom(Filename string) ([]FileInfo, error) {
 
 
 
-// FilePaths returns all file paths (relative to root)
-func (m *TreeManifest) FilePaths() []string {
-	return m.files
-}
-
-
-
-func (m *TreeManifest) ChangeRootName(NewName string) {
-	m.RootName = NewName
-}

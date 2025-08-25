@@ -1,12 +1,11 @@
 package main
 
 import (
-	"GDS/FileTree"
+	//"GDS/FileTree"
 	"GDS/TCPServer"
-	"fmt"
+	//"fmt"
 	"log"
 	"net/http"
-
 	"github.com/gorilla/mux"
 )
 
@@ -22,20 +21,24 @@ func main() {
 
     
 
-    t,err := FileTree.Parse("./myproject.protocol")
+ /*
+    t,err := FileTree.Parse("./game-repo/Cursed Mansion/conf/myproject.tree")
 
     if err != nil {
         log.Fatal(err)
     }
     
-	files, err := t.FilesFrom("tree.py")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for _, v := range files {
+	f,_ := t.FilesFrom("System/KGL2.klib")
+	
+	for _,v := range f {
 		fmt.Println(v)
 	}
+
+ 
+
+*/
+
+
 
 
     go tcpserver.StartTCPServer()

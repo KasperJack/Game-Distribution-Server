@@ -1,3 +1,5 @@
 package config
 
-const GamesRepo = "./games-repo"
+const GamesRepo = "./game-repo"
+
+const GameTree = "/_dist_server/gametree.tree"
