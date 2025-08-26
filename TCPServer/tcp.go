@@ -88,11 +88,10 @@ func handleClientDownload(conn net.Conn) {
 
     filepaths := t.Files()
 
-
     
     for _, file := range filepaths {
         
-        filePath := filepath.Join(config.GamesRepo,game,file)
+        filePath := filepath.Join(t.RootDir,file)  //Join(config.GamesRepo,game,file)
         fmt.Println(filePath)
         file, err := os.Open(filePath)
         if err != nil {
@@ -122,8 +121,10 @@ func handleClientDownload(conn net.Conn) {
 
 
 
-func StartTCPServer() {
 
+
+
+func StartTCPServer() {
 
     listener, err := net.Listen("tcp", ":5050")
     if err != nil {

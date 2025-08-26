@@ -64,7 +64,7 @@ func (t *TreeManifest) FileInfo() ([]FileInfo, error) {
 	var fileList []FileInfo
 	for _, f := range t.files {
 
-		fullPath := filepath.Join(t.rootDir, f)
+		fullPath := filepath.Join(t.RootDir, f)
 		info, err := os.Stat(fullPath)
 		if err != nil {
 			return nil, err 
@@ -91,7 +91,7 @@ func (t *TreeManifest) FileInfoFrom(Filename string) ([]FileInfo, error) {
 	var fileList []FileInfo
 	for _, f := range files {
 
-		fullPath := filepath.Join(t.rootDir, f)
+		fullPath := filepath.Join(t.RootDir, f)
 
 		info, err := os.Stat(fullPath)
 		if err != nil {

@@ -14,7 +14,7 @@ import (
 type TreeManifest struct {
 	protocolVersion string
 	rootName        string
-	rootDir         string
+	RootDir         string
 	blob            []byte
 	generated       time.Time
 	TotalDirs       int
@@ -45,7 +45,7 @@ func Parse(path string) (*TreeManifest, error) {
 
 
 	
-	m.rootDir = gameDir
+	m.RootDir = gameDir
 	scanner := bufio.NewScanner(bytes.NewReader(data))
 
 	inDirs, inFiles := false, false
