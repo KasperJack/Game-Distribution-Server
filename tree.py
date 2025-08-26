@@ -93,11 +93,11 @@ def scan_directory_for_network(directory, show_hidden=False, include_stats=False
         'files': files
     }
 
-def save_network_format(data, output_file, root_path, format_type='json'):
+def save_network_format(data, output_file, root_path, format_type='tree'):
     """Save in network-optimized format"""
 
     output = {
-        'protocol_version': '1.0',
+        'protocol_version': '1.2',
         'root_name': root_path.name,
         'root_path': str(root_path),
         'generated': datetime.now().isoformat(),
@@ -115,10 +115,10 @@ def save_network_format(data, output_file, root_path, format_type='json'):
         with open(output_file, 'w', encoding='utf-8') as f:
             json.dump(output, f, indent=2, ensure_ascii=False)
 
-    elif format_type == 'protocol':
-        # Custom protocol format: easy to parse line by line
+    elif format_type == 'tree':
+        # Custom tree format: easy to parse line by line
         with open(output_file, 'w', encoding='utf-8') as f:
-            f.write(f"PROTOCOL_VERSION:1.0\n")
+            f.write(f"PROTOCOL_VERSION:1.2\n")
             f.write(f"ROOT_NAME:{root_path.name}\n")
             f.write(f"GENERATED:{datetime.now().isoformat()}\n")
             f.write(f"TOTAL_DIRS:{len(data['directories'])}\n")
@@ -143,102 +143,16 @@ def save_network_format(data, output_file, root_path, format_type='json'):
 
             f.write("END_MANIFEST\n")
 
-def generate_client_example(output_dir):
-    """Generate example client code"""
-    client_code = '''#!/usr/bin/env python3
-"""
-Example client code for processing the directory manifest
-"""
 
-import json
-import os
-from pathlib import Path
-
-def process_manifest(manifest_file, target_dir):
-    """Process manifest and create directory structure"""
-
-    with open(manifest_file, 'r') as f:
-        if manifest_file.endswith('.json'):
-            data = json.load(f)
-        else:
-            # Parse protocol format
-            data = parse_protocol_format(f.read())
-
-    target_path = Path(target_dir)
-    target_path.mkdir(exist_ok=True)
-
-    print(f"Creating directory structure in: {target_path}")
-
-    # Step 1: Create all directories
-    print("Step 1: Creating directories...")
-    for dir_item in data['directories']:
-        if 'error' not in dir_item:
-            dir_path = target_path / dir_item['path']
-            dir_path.mkdir(parents=True, exist_ok=True)
-            print(f"  Created: {dir_path}")
-
-    # Step 2: List files to request
-    print("\\nStep 2: Files to request:")
-    file_requests = []
-    for file_item in data['files']:
-        if 'error' not in file_item:
-            file_requests.append({
-                'remote_path': file_item['path'],
-                'local_path': target_path / file_item['path'],
-                'size': file_item.get('size', 0)
-            })
-            print(f"  Request: {file_item['path']} ({file_item.get('size', '?')} bytes)")
-
-    return file_requests
-
-def parse_protocol_format(content):
-    """Parse custom protocol format"""
-    lines = content.strip().split('\\n')
-    data = {'directories': [], 'files': []}
-
-    section = None
-    for line in lines:
-        if line.startswith('BEGIN_DIRECTORIES'):
-            section = 'directories'
-        elif line.startswith('BEGIN_FILES'):
-            section = 'files'
-        elif line.startswith('DIR:') and section == 'directories':
-            parts = line[4:].split(':')
-            data['directories'].append({
-                'path': parts[0],
-                'depth': int(parts[1]) if len(parts) > 1 else 0
-            })
-        elif line.startswith('FILE:') and section == 'files':
-            parts = line[5:].split(':')
-            item = {'path': parts[0]}
-            if len(parts) > 1 and parts[1].isdigit():
-                item['size'] = int(parts[1])
-            data['files'].append(item)
-
-    return data
-
-if __name__ == "__main__":
-    import sys
-    if len(sys.argv) != 3:
-        print("Usage: python client_example.py manifest_file target_directory")
-        sys.exit(1)
-
-    file_requests = process_manifest(sys.argv[1], sys.argv[2])
-    print(f"\\nReady to request {len(file_requests)} files!")
-'''
-
-    with open(f"{output_dir}/client_example.py", 'w') as f:
-        f.write(client_code)
 
 def main():
     parser = argparse.ArgumentParser(description="Generate directory tree for network transfer")
     parser.add_argument("directory", nargs="?", default=".", help="Directory to scan")
-    parser.add_argument("-o", "--output", default="manifest", help="Output file name (no extension)")
-    parser.add_argument("-f", "--format", choices=['json', 'protocol'], default='json',
+    parser.add_argument("-o", "--output", default="gametree", help="Output file name (no extension)")
+    parser.add_argument("-f", "--format", choices=['json', 'tree'], default='tree',
                        help="Output format (default: json)")
     parser.add_argument("-a", "--all", action="store_true", help="Include hidden files")
     parser.add_argument("-s", "--stats", action="store_true", help="Include file statistics")
-    parser.add_argument("--client-example", action="store_true", help="Generate example client code")
 
     args = parser.parse_args()
 
@@ -261,26 +175,22 @@ def main():
     # Save manifest
     save_network_format(data, output_file, target_dir, args.format)
 
-    print(f"\\nManifest generated successfully!")
+    print(f"🔲 Manifest generated successfully!")
     print(f"- Directories: {len(data['directories'])} (will be created first)")
     print(f"- Files: {len(data['files'])} (will be requested after)")
     print(f"- Saved to: {output_file}")
 
-    # Generate client example
-    if args.client_example:
-        generate_client_example(".")
-        print(f"- Client example: client_example.py")
 
     # Show first few items for verification
     if data['directories']:
-        print("\\nFirst directories to create:")
+        print("● First directories to create:")
         for i, dir_item in enumerate(data['directories'][:5]):
             print(f"  {i+1}. {dir_item['path']} (depth: {dir_item['depth']})")
         if len(data['directories']) > 5:
             print(f"  ... and {len(data['directories']) - 5} more")
 
     if data['files']:
-        print("\\nFirst files to request:")
+        print("● First files to request:")
         for i, file_item in enumerate(data['files'][:5]):
             size_info = f" ({file_item['size']} bytes)" if 'size' in file_item else ""
             print(f"  {i+1}. {file_item['path']}{size_info}")
